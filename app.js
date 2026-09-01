@@ -7,6 +7,10 @@ const replies = [
   'Les actions techniques apparaîtront dans le panneau Terminal séparé, jamais au milieu de la conversation.'
 ];
 let replyIndex = 0;
+document.querySelector('.notify-button')?.addEventListener('click', () => {
+  window.alert('Les téléchargements Android et iPhone seront ajoutés dès que les builds seront prêtes.');
+});
+
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   const text = input.value.trim();

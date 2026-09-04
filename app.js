@@ -1,6 +1,6 @@
 const params = new URLSearchParams(location.search);
 const config = {
-  agent: params.get('agent') || localStorage.getItem('mini-copilot-agent') || '',
+  agent: params.get('agent') || localStorage.getItem('mini-copilot-agent') || 'http://127.0.0.1:8765',
   token: params.get('token') || localStorage.getItem('mini-copilot-agent-token') || '',
   githubRepo: 'fenocicinho-prog/mini-copilot',
 };
@@ -70,7 +70,7 @@ async function hydrateReleaseLinks() {
   } catch (_) { /* liens de secours conservés */ }
 }
 const webLaunch = document.querySelector('#web-launch');
-if (webLaunch && config.agent) webLaunch.href = `${config.agent.replace(/\/$/, '')}/launch`;
+if (webLaunch && config.agent) { webLaunch.href = `${config.agent.replace(/\/$/, '')}/launch`; webLaunch.target = '_blank'; webLaunch.rel = 'noopener'; }
 setDemoState(false);
 connectAgent();
 hydrateReleaseLinks();

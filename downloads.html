@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Télécharger Mini Copilot pour Android et Windows." />
+  <title>Télécharger — Mini Copilot</title>
+  <link rel="icon" href="./rt_icon.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .download-page{min-height:calc(100vh - 160px);padding:86px 0 110px}.download-intro{max-width:700px}.download-intro h1{font-size:clamp(44px,7vw,76px)}.download-intro p{font-size:18px;line-height:1.6;color:var(--muted)}.download-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:55px}.download-card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:30px;display:flex;flex-direction:column;min-height:285px}.download-card h2{font-size:30px;margin:18px 0 10px;letter-spacing:-.04em}.download-card p{color:var(--muted);line-height:1.6;min-height:52px}.download-card .button{margin-top:auto}.download-meta{display:block;color:var(--muted);font:11px 'DM Mono',monospace;margin-top:14px}.status{font:11px 'DM Mono',monospace;color:var(--muted);margin-top:30px}.status.ready{color:#fff}.back{margin-top:28px;display:inline-block;color:var(--muted);font-size:14px}.back:hover{color:var(--text)}@media(max-width:760px){.download-grid{grid-template-columns:1fr}.download-page{padding-top:60px}}
+  </style>
+</head>
+<body>
+  <nav class="nav shell">
+    <a class="brand" href="./"><img src="./rt_icon.png" alt="RT" /><span>Mini Copilot</span></a>
+    <div class="nav-links"><a href="./#features">Fonctions</a><a class="nav-cta" href="./">Accueil</a></div>
+  </nav>
+  <main class="download-page shell">
+    <div class="download-intro">
+      <p class="eyebrow"><span></span> Versions officielles</p>
+      <h1>Téléchargez Mini Copilot.</h1>
+      <p>Choisissez votre plateforme. Les liens sont résolus automatiquement depuis les releases publiques GitHub afin de toujours proposer le fichier disponible le plus récent.</p>
+    </div>
+    <section class="download-grid" aria-label="Téléchargements">
+      <article class="download-card">
+        <p class="eyebrow"><span></span> Android</p>
+        <h2>Application Android</h2>
+        <p>Installez l’APK signé directement sur votre téléphone Android. Autorisez l’installation depuis cette source si Android le demande.</p>
+        <a class="button primary" id="android-download" href="https://github.com/fenocicinho-prog/mini-copilot/releases" target="_blank" rel="noreferrer">Voir la release Android <span>↓</span></a>
+        <small class="download-meta" id="android-version">Recherche du dernier APK…</small>
+      </article>
+      <article class="download-card">
+        <p class="eyebrow"><span></span> Windows</p>
+        <h2>Application Windows</h2>
+        <p>Utilisez l’installateur Windows pour installer Mini Copilot et son pont local. Une version portable est également publiée quand elle est disponible.</p>
+        <a class="button primary" id="windows-download" href="https://github.com/fenocicinho-prog/mini-copilot/releases" target="_blank" rel="noreferrer">Télécharger l’installateur <span>↓</span></a>
+        <small class="download-meta" id="windows-version">Recherche du dernier installateur…</small>
+      </article>
+    </section>
+    <p class="status" id="release-status">Connexion à GitHub pour vérifier les fichiers disponibles…</p>
+    <a class="back" href="./">← Retour à la présentation</a>
+  </main>
+  <footer class="shell footer"><span>© 2026 Mini Copilot</span><a href="https://github.com/fenocicinho-prog/mini-copilot">Code de l’application</a><span>RT — Build with intention.</span></footer>
+  <script>
+    const repo = 'fenocicinho-prog/mini-copilot';
+    const fallback = `https://github.com/${repo}/releases`;
+    async function loadReleases() {
+      const status = document.querySelector('#release-status');
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers: { Accept: 'application/vnd.github+json' } });
+        if (!response.ok) throw new Error('GitHub API indisponible');
+        const releases = await response.json();
+        const android = releases.flatMap(r => (r.assets || []).map(a => ({...a, release: r}))).find(a => /\.apk$/i.test(a.name));
+        const windows = releases.flatMap(r => (r.assets || []).map(a => ({...a, release: r}))).find(a => /\.exe$/i.test(a.name) && /setup|installer|mini.?copilot/i.test(a.name));
+        const androidLink = document.querySelector('#android-download');
+        const windowsLink = document.querySelector('#windows-download');
+        if (android) { androidLink.href = android.browser_download_url; document.querySelector('#android-version').textContent = `${android.release.tag_name} · ${android.name}`; }
+        else document.querySelector('#android-version').textContent = 'APK en attente de publication';
+        if (windows) { windowsLink.href = windows.browser_download_url; document.querySelector('#windows-version').textContent = `${windows.release.tag_name} · ${windows.name}`; }
+        else document.querySelector('#windows-version').textContent = 'Installateur en attente de publication';
+        status.textContent = 'Les liens sont à jour avec les releases publiques GitHub.'; status.classList.add('ready');
+      } catch (_) { status.textContent = 'GitHub est momentanément indisponible. Les liens de secours ouvrent la page des releases.'; document.querySelector('#android-download').href = fallback; document.querySelector('#windows-download').href = fallback; }
+    }
+    loadReleases();
+  </script>
+</body>
+</html>

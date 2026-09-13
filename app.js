@@ -58,15 +58,15 @@ form?.addEventListener('submit', async event => {
 
 async function hydrateReleaseLinks() {
   try {
-    const response = await fetch(`https://api.github.com/repos/${config.githubRepo}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
+    const response = await fetch(`https://api.github.com/repos/${config.githubRepo}/releases?per_page=30`, { headers: { Accept: 'application/vnd.github+json' } });
     if (!response.ok) return;
-    const release = await response.json();
-    const exe = release.assets?.find(asset => /setup|windows.*\.exe$/i.test(asset.name));
-    const apk = release.assets?.find(asset => /\.apk$/i.test(asset.name));
+    const releases = await response.json();
+    const assets = releases.flatMap(release => (release.assets || []).map(asset => ({ ...asset, release })));
+    const exe = assets.find(asset => /\.exe$/i.test(asset.name) && /setup|installer|mini.?copilot/i.test(asset.name));
+    const apk = assets.find(asset => /\.apk$/i.test(asset.name));
     const windows = document.querySelector('#windows-download'); const android = document.querySelector('#android-download');
-    if (windows) windows.href = exe?.browser_download_url || release.html_url;
-    if (android) android.href = apk?.browser_download_url || release.html_url;
-    const version = document.querySelector('#release-version'); if (version) version.textContent = release.tag_name || 'dernière version';
+    if (windows) windows.href = exe?.browser_download_url || 'https://github.com/fenocicinho-prog/mini-copilot/releases';
+    if (android) android.href = apk?.browser_download_url || 'https://github.com/fenocicinho-prog/mini-copilot/releases';
   } catch (_) { /* liens de secours conservés */ }
 }
 const webLaunch = document.querySelector('#web-launch');

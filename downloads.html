@@ -56,7 +56,7 @@
         const androidLink = document.querySelector('#android-download');
         const windowsLink = document.querySelector('#windows-download');
         if (android) { androidLink.href = android.browser_download_url; document.querySelector('#android-version').textContent = `${android.release.tag_name} · ${android.name}`; }
-        else document.querySelector('#android-version').textContent = 'APK en attente de publication';
+        else { androidLink.href = 'https://expo.dev/accounts/cicinhohill/projects/mini-copilot-mobile/builds/acdaf107-c3ba-4948-8824-ccc2242e9e58'; document.querySelector('#android-version').textContent = 'Build EAS disponible · ouvrir le téléchargement'; }
         if (windows) { windowsLink.href = windows.browser_download_url; document.querySelector('#windows-version').textContent = `${windows.release.tag_name} · ${windows.name}`; }
         else document.querySelector('#windows-version').textContent = 'Installateur en attente de publication';
         status.textContent = 'Les liens sont à jour avec les releases publiques GitHub.'; status.classList.add('ready');

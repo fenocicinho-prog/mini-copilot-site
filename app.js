@@ -1,13 +1,12 @@
 const params = new URLSearchParams(location.search);
 const config = {
-  agent: params.get('agent') || localStorage.getItem('mini-copilot-agent') || 'http://127.0.0.1:8765',
-  token: params.get('token') || localStorage.getItem('mini-copilot-agent-token') || '',
+  agent: params.get('agent') || '',
+  token: params.get('token') || '',
   githubRepo: 'fenocicinho-prog/mini-copilot',
 };
 const form = document.querySelector('#demo-form');
 const input = document.querySelector('#demo-input');
 const log = document.querySelector('#demo-log');
-let eventSource = null;
 let thinking = null;
 
 function addMessage(text, role) {
@@ -19,41 +18,35 @@ function addMessage(text, role) {
   message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   return message;
 }
-function setDemoState(connected, detail = '') {
+
+function setDemoState(ready, detail = '') {
   const badge = document.querySelector('#demo-state');
-  if (badge) { badge.textContent = connected ? '● IA CONNECTÉE' : '○ CONFIGURATION REQUISE'; badge.classList.toggle('connected', connected); }
+  if (badge) { badge.textContent = ready ? '● DÉMO PRÊTE' : '○ DÉMO INDISPONIBLE'; badge.classList.toggle('connected', ready); }
   const hint = document.querySelector('#demo-hint');
-  if (hint) hint.textContent = detail || (connected ? 'Plan gratuit — chat uniquement.' : 'Lancez web_server.py puis ouvrez le site avec ?agent=...&token=...');
-  if (input) input.disabled = !connected;
-  const button = form?.querySelector('button'); if (button) button.disabled = !connected;
+  if (hint) hint.textContent = detail || (ready ? 'Démo prête — aucune installation ni clé API requise.' : 'Réessayez dans quelques instants.');
+  if (input) input.disabled = !ready;
+  const button = form?.querySelector('button'); if (button) button.disabled = !ready;
 }
-function connectAgent() {
-  if (!config.agent || !config.token) { setDemoState(false); return; }
-  localStorage.setItem('mini-copilot-agent', config.agent); localStorage.setItem('mini-copilot-agent-token', config.token);
-  eventSource = new EventSource(`${config.agent.replace(/\/$/, '')}/events?token=${encodeURIComponent(config.token)}`);
-  eventSource.onopen = () => setDemoState(true);
-  eventSource.onerror = () => { setDemoState(false, 'Serveur agent déconnecté. Relancez web_server.py.'); eventSource.close(); };
-  eventSource.onmessage = event => {
-    try {
-      const frame = JSON.parse(event.data);
-      if (thinking && ['assistant', 'error', 'confirm'].includes(frame.kind)) { thinking.remove(); thinking = null; }
-      if (frame.kind === 'assistant' && frame.text) addMessage(frame.text, 'ai');
-      else if (frame.kind === 'error') addMessage(`Erreur : ${frame.text}`, 'ai');
-      else if (frame.kind === 'confirm') addMessage('Cette action avancée est réservée aux plans autorisés dans l’application complète.', 'ai');
-    } catch (_) { /* frame invalide ignorée */ }
-  };
+
+function demoReply(text) {
+  const message = text.toLowerCase();
+  if (message.includes('bonjour') || message.includes('salut') || message.includes('hello')) return 'Bonjour. Je peux vous aider à imaginer, structurer ou améliorer un projet logiciel.';
+  if (message.includes('site') || message.includes('web')) return 'Pour un site moderne, commencez par définir l’objectif, les utilisateurs et une première interface simple. Mini Copilot peut ensuite vous aider à construire chaque étape.';
+  if (message.includes('android') || message.includes('windows') || message.includes('application')) return 'Mini Copilot est disponible sur le Web, Android et Windows. Utilisez la page Télécharger pour récupérer la version adaptée à votre appareil.';
+  if (message.includes('code') || message.includes('projet') || message.includes('bug')) return 'Je commencerais par inspecter la structure du projet, les dépendances et le message d’erreur, puis je proposerais une correction vérifiable étape par étape.';
+  return 'Bonne idée. Je peux vous aider à la transformer en étapes concrètes : objectif, interface, données, logique, puis vérification.';
 }
-async function sendToAgent(text) {
-  const response = await fetch(`${config.agent.replace(/\/$/, '')}/message`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-MiniCopilot-Token': config.token }, body: JSON.stringify({ text }) });
-  if (!response.ok) throw new Error(`Agent indisponible (${response.status})`);
-}
+
 form?.addEventListener('submit', async event => {
   event.preventDefault();
   const text = input.value.trim();
-  if (!text || !config.agent || !config.token) return;
+  if (!text) return;
   addMessage(text, 'user'); input.value = ''; input.focus();
   thinking = addMessage('Je prépare une réponse…', 'ai loading');
-  try { await sendToAgent(text); } catch (error) { if (thinking) thinking.remove(); thinking = null; addMessage(error.message, 'ai'); }
+  await new Promise(resolve => setTimeout(resolve, 450));
+  if (thinking) thinking.remove();
+  thinking = null;
+  addMessage(demoReply(text), 'ai');
 });
 
 async function hydrateReleaseLinks() {
@@ -69,8 +62,6 @@ async function hydrateReleaseLinks() {
     if (android) android.href = apk?.browser_download_url || 'https://github.com/fenocicinho-prog/mini-copilot/releases';
   } catch (_) { /* liens de secours conservés */ }
 }
-const webLaunch = document.querySelector('#web-launch');
-if (webLaunch && config.agent) { webLaunch.href = `${config.agent.replace(/\/$/, '')}/launch`; webLaunch.target = '_blank'; webLaunch.rel = 'noopener'; }
-setDemoState(false);
-connectAgent();
+
+setDemoState(true);
 hydrateReleaseLinks();

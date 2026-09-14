@@ -32,7 +32,10 @@ const clearBtn = document.getElementById("clearBtn");
 const terminalEl = document.getElementById("terminal");
 // Un serveur local génère un nouveau token à chaque lancement : une nouvelle
 // installation/session ne récupère donc pas silencieusement l’ancien cache navigateur.
-const HISTORY_KEY = `mini-copilot-history-v2:${location.origin}:${token || "no-session"}`;
+function getHistoryKey() {
+  const identity = remoteMode ? centralSession?.user?.openId || "guest" : token || "local";
+  return `mini-copilot-history-v3:${location.origin}:${identity}`;
+}
 let restoring = true;
 
 function saveHistory() {
@@ -42,12 +45,12 @@ function saveHistory() {
   const actions = [...actionsEl.querySelectorAll("li")].map(li => ({
     label: li.querySelector(".label")?.textContent || "Action", status: li.dataset.status || "ok",
     time: li.querySelector(".time")?.textContent || "" })).slice(-300);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify({ messages, actions, terminal: terminalEl.textContent }));
+  localStorage.setItem(getHistoryKey(), JSON.stringify({ messages, actions, terminal: terminalEl.textContent }));
 }
 
 function loadHistory() {
   try {
-    const data = JSON.parse(localStorage.getItem(HISTORY_KEY) || "{}");
+    const data = JSON.parse(localStorage.getItem(getHistoryKey()) || "{}");
     (data.messages || []).forEach(item => addRow(item.role, item.text, false));
     (data.actions || []).reverse().forEach(item => addAction(item.label, item.status, false, item.time));
     terminalEl.textContent = data.terminal || "";
@@ -181,6 +184,28 @@ function setConnected(ok, isError) {
   submitBtn.disabled = !ok;
 }
 
+function clearConversationView() {
+  logEl.innerHTML = "";
+  actionsEl.innerHTML = "";
+  terminalEl.textContent = "";
+  confirmEl.style.display = "none";
+}
+
+function openAuth() {
+  document.getElementById("auth").style.display = "grid";
+  document.getElementById("email").focus();
+}
+
+async function activateRemoteSession(session) {
+  centralSession = session;
+  localStorage.setItem("mini-copilot-session", JSON.stringify(centralSession));
+  clearConversationView();
+  restoring = true;
+  loadHistory();
+  setConnected(true);
+  statusText.textContent = `Session active — ${centralSession.user?.email || "compte connecté"}`;
+}
+
 async function post(path, body) {
   const res = await fetch(apiBase + path, {
     method: "POST",
@@ -234,18 +259,19 @@ function handleFrame(frame) {
 
 function setupAccountUI() {
   const auth = document.getElementById("auth"), plans = document.getElementById("plans"); let register = false;
-  document.getElementById("authBtn").onclick = () => auth.style.display = "grid";
+  document.getElementById("authBtn").onclick = openAuth;
   document.getElementById("plansBtn").onclick = () => { document.getElementById("planGrid").innerHTML = '<article class="plan-card"><h3>Accès gratuit</h3><p>Toutes les fonctionnalités sont disponibles sans abonnement ni carte bancaire.</p></article>'; plans.style.display="block"; };
   document.getElementById("authClose").onclick=()=>auth.style.display="none"; document.getElementById("plansClose").onclick=()=>plans.style.display="none";
   document.getElementById("authMode").onclick=()=>{register=!register; document.getElementById("authTitle").textContent=register?"Créer un compte":"Se connecter"; document.getElementById("authSubmit").textContent=register?"S’inscrire":"Se connecter"; document.getElementById("firstName").style.display=register?"block":"none"; document.getElementById("lastName").style.display=register?"block":"none";};
   document.getElementById("googleBtn").onclick=()=>{const url=params.get("oauth"); if(url) location.href=url; else document.getElementById("authError").textContent="Ajoutez ?oauth=URL_OAUTH_PUBLIQUE";};
-  document.getElementById("authSubmit").onclick=async()=>{try{const body={email:email.value,password:password.value};if(register)Object.assign(body,{firstName:firstName.value,lastName:lastName.value});const r=await fetch(centralApi+`/api/auth/${register?"register":"login"}`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error);centralSession={user:d.user,token:d.sessionToken||""};localStorage.setItem("mini-copilot-session",JSON.stringify(centralSession));auth.style.display="none";}catch(e){document.getElementById("authError").textContent=e.message;}};
+  document.getElementById("authSubmit").onclick=async()=>{try{const body={email:email.value,password:password.value};if(register)Object.assign(body,{firstName:firstName.value,lastName:lastName.value});const r=await fetch(centralApi+`/api/auth/${register?"register":"login"}`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error);if(!d.sessionToken)throw Error("Le serveur n’a pas fourni de session.");await activateRemoteSession({user:d.user,token:d.sessionToken});auth.style.display="none";}catch(e){document.getElementById("authError").textContent=e.message;}};
 }
 
 async function remoteChat(message) {
+  if (!centralSession?.token) throw new Error("Connectez-vous pour utiliser le chat.");
   const response = await fetch(`${centralApi.replace(/\/$/, "")}/api/trpc/chat.complete`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${centralSession.token}` },
     body: JSON.stringify({ json: { message } }),
   });
   const payload = await response.json().catch(() => ({}));
@@ -255,9 +281,26 @@ async function remoteChat(message) {
 
 function connect() {
   if (remoteMode) {
-    setConnected(true);
-    statusText.textContent = "Vercel — session Web active";
     projectPathEl.textContent = "Espace Web Mini Copilot";
+    if (!centralSession?.token) {
+      setConnected(false);
+      statusText.textContent = "Connexion requise";
+      openAuth();
+      return;
+    }
+    fetch(`${centralApi.replace(/\/$/, "")}/api/auth/entitlements`, { headers: { Authorization: `Bearer ${centralSession.token}` } })
+      .then(response => {
+        if (!response.ok) throw new Error("Session expirée");
+        setConnected(true);
+        statusText.textContent = `Session active — ${centralSession.user?.email || "compte connecté"}`;
+      })
+      .catch(() => {
+        centralSession = null;
+        localStorage.removeItem("mini-copilot-session");
+        setConnected(false, true);
+        statusText.textContent = "Session expirée";
+        openAuth();
+      });
     return;
   }
   if (!token) {
@@ -297,7 +340,7 @@ composer.addEventListener("submit", async (ev) => {
       return;
     }
     if (!centralApi) { addError("API centrale non configurée"); return; }
-    if (!centralSession) { document.getElementById("auth").style.display = "grid"; return; }
+    if (!centralSession?.token) { openAuth(); return; }
     const response = await fetch(centralApi.replace(/\/$/, "") + "/api/auth/entitlements", { credentials: "include", headers: centralSession.token ? { Authorization: `Bearer ${centralSession.token}` } : {} });
     const access = await response.json();
     if (!response.ok) throw new Error(access.error || "Session invalide");
@@ -332,9 +375,7 @@ async function respondConfirm(accepted) {
 }
 
 clearBtn.addEventListener("click", () => {
-  logEl.innerHTML = "";
-  actionsEl.innerHTML = "";
-  terminalEl.textContent = "";
+  clearConversationView();
   saveHistory();
 });
 

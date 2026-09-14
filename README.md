@@ -10,3 +10,6 @@ Le produit Mini Copilot est entièrement gratuit et ne propose aucun abonnement,
 node --check app.js
 git diff --check
 ```
+```powershell
+git push
+```

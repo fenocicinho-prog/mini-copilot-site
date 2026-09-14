@@ -11,9 +11,9 @@ const params = new URLSearchParams(location.search);
 const token = params.get("token");
 const remotePort = params.get("port");
 const apiBase = remotePort ? `http://127.0.0.1:${remotePort}` : location.origin;
-const isLocalServer = !remotePort;
-const centralApi = params.get("api") || localStorage.getItem("mini-copilot-central-api") || "https://mini-copilot-api.vercel.app";
-const remoteMode = !token && !remotePort && Boolean(centralApi);
+const isLocalServer = Boolean(token || remotePort);
+const centralApi = params.get("api") || localStorage.getItem("mini-copilot-central-api") || location.origin;
+const remoteMode = !isLocalServer;
 let centralSession = JSON.parse(localStorage.getItem("mini-copilot-session") || "null");
 let entitlement = null;
 
@@ -33,29 +33,71 @@ const terminalEl = document.getElementById("terminal");
 // Un serveur local génère un nouveau token à chaque lancement : une nouvelle
 // installation/session ne récupère donc pas silencieusement l’ancien cache navigateur.
 function getHistoryKey() {
-  const identity = remoteMode ? centralSession?.user?.openId || "guest" : token || "local";
+  const identity = centralSession?.user?.openId || token || "local";
   return `mini-copilot-history-v3:${location.origin}:${identity}`;
 }
 let restoring = true;
+let workspaceSaveTimer = null;
 
-function saveHistory() {
+function workspacePayload() {
   const messages = [...logEl.querySelectorAll(".row")].filter(row => !row.querySelector(".bubble.thinking"))
     .map(row => ({ role: row.classList.contains("user") ? "user" : row.classList.contains("system") ? "system" : "ai",
       text: row.querySelector(".bubble")?.innerText || "" })).slice(-300);
   const actions = [...actionsEl.querySelectorAll("li")].map(li => ({
     label: li.querySelector(".label")?.textContent || "Action", status: li.dataset.status || "ok",
     time: li.querySelector(".time")?.textContent || "" })).slice(-300);
-  localStorage.setItem(getHistoryKey(), JSON.stringify({ messages, actions, terminal: terminalEl.textContent }));
+  return { messages, actions, terminal: terminalEl.textContent || "" };
 }
 
-function loadHistory() {
+async function workspaceRequest(procedure, body = {}) {
+  const response = await fetch(`${centralApi.replace(/\/$/, "")}/api/trpc/workspace.${procedure}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${centralSession.token}` },
+    body: JSON.stringify({ json: body }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.error) throw new Error(payload.error?.json?.message || `workspace.${procedure} a échoué.`);
+  return payload.result?.data?.json ?? {};
+}
+
+function scheduleWorkspaceSave() {
+  if (!centralSession?.token) return;
+  clearTimeout(workspaceSaveTimer);
+  workspaceSaveTimer = setTimeout(() => {
+    workspaceRequest("save", workspacePayload()).catch(() => undefined);
+  }, 1000);
+}
+
+function saveHistory() {
+  const data = workspacePayload();
+  localStorage.setItem(getHistoryKey(), JSON.stringify(data));
+  scheduleWorkspaceSave();
+}
+
+function applyHistory(data) {
+  clearConversationView();
+  (data.messages || []).forEach(item => addRow(item.role, item.text, false));
+  (data.actions || []).slice().reverse().forEach(item => addAction(item.label, item.status, false, item.time));
+  terminalEl.textContent = Array.isArray(data.terminal) ? data.terminal.join("\n") : (data.terminal || "");
+}
+
+async function loadHistory() {
   try {
     const data = JSON.parse(localStorage.getItem(getHistoryKey()) || "{}");
-    (data.messages || []).forEach(item => addRow(item.role, item.text, false));
-    (data.actions || []).reverse().forEach(item => addAction(item.label, item.status, false, item.time));
-    terminalEl.textContent = data.terminal || "";
+    applyHistory(data);
   } catch { /* historique local invalide : on démarre proprement */ }
   restoring = false;
+  if (!centralSession?.token) return;
+  try {
+    restoring = true;
+    const remote = await workspaceRequest("get");
+    applyHistory(remote);
+    localStorage.setItem(getHistoryKey(), JSON.stringify(remote));
+  } catch {
+    // Le cache reste utilisable hors ligne; il sera resynchronisé au prochain changement.
+  } finally {
+    restoring = false;
+  }
 }
 
 // ---------------------------------------------------------------- messages

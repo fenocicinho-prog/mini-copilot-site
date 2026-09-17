@@ -27,15 +27,15 @@
         <p class="eyebrow"><span></span> Android</p>
         <h2>Application Android</h2>
         <p>Installez l’APK signé directement sur votre téléphone Android. Autorisez l’installation depuis cette source si Android le demande.</p>
-        <a class="button primary" id="android-download" href="https://github.com/fenocicinho-prog/mini-copilot/releases" target="_blank" rel="noreferrer">Voir la release Android <span>↓</span></a>
-        <small class="download-meta" id="android-version">Recherche du dernier APK…</small>
+        <a class="button primary" id="android-download" href="#" aria-disabled="true">Télécharger l’APK <span>↓</span></a>
+        <small class="download-meta pending" id="android-version">Vérification du fichier disponible…</small>
       </article>
       <article class="download-card">
         <p class="eyebrow"><span></span> Windows</p>
         <h2>Application Windows</h2>
         <p>Utilisez l’installateur Windows pour installer Mini Copilot et son pont local. Une version portable est également publiée quand elle est disponible.</p>
-        <a class="button primary" id="windows-download" href="https://github.com/fenocicinho-prog/mini-copilot/releases" target="_blank" rel="noreferrer">Télécharger l’installateur <span>↓</span></a>
-        <small class="download-meta" id="windows-version">Recherche du dernier installateur…</small>
+        <a class="button primary" id="windows-download" href="#" aria-disabled="true">Télécharger Windows <span>↓</span></a>
+        <small class="download-meta pending" id="windows-version">Vérification du fichier disponible…</small>
       </article>
     </section>
     <p class="status" id="release-status">Connexion à GitHub pour vérifier les fichiers disponibles…</p>
@@ -44,7 +44,6 @@
   <footer class="shell footer"><span>© 2026 Mini Copilot</span><a href="https://github.com/fenocicinho-prog/mini-copilot">Code de l’application</a><span>RT — Build with intention.</span></footer>
   <script>
     const repo = 'fenocicinho-prog/mini-copilot';
-    const fallback = `https://github.com/${repo}/releases`;
     async function loadReleases() {
       const status = document.querySelector('#release-status');
       try {
@@ -55,12 +54,12 @@
         const windows = releases.flatMap(r => (r.assets || []).map(a => ({...a, release: r}))).find(a => /\.exe$/i.test(a.name) && /setup|installer|mini.?copilot/i.test(a.name));
         const androidLink = document.querySelector('#android-download');
         const windowsLink = document.querySelector('#windows-download');
-        if (android) { androidLink.href = android.browser_download_url; document.querySelector('#android-version').textContent = `${android.release.tag_name} · ${android.name}`; }
-        else { androidLink.href = 'https://expo.dev/accounts/cicinhohill/projects/mini-copilot-mobile/builds/acdaf107-c3ba-4948-8824-ccc2242e9e58'; document.querySelector('#android-version').textContent = 'Build EAS disponible · ouvrir le téléchargement'; }
-        if (windows) { windowsLink.href = windows.browser_download_url; document.querySelector('#windows-version').textContent = `${windows.release.tag_name} · ${windows.name}`; }
-        else document.querySelector('#windows-version').textContent = 'Installateur en attente de publication';
-        status.textContent = 'Les liens sont à jour avec les releases publiques GitHub.'; status.classList.add('ready');
-      } catch (_) { status.textContent = 'GitHub est momentanément indisponible. Les liens de secours ouvrent la page des releases.'; document.querySelector('#android-download').href = fallback; document.querySelector('#windows-download').href = fallback; }
+        if (android) { androidLink.href = android.browser_download_url; androidLink.removeAttribute('aria-disabled'); androidLink.setAttribute('download', android.name); document.querySelector('#android-version').textContent = `${android.release.tag_name} · ${android.name}`; document.querySelector('#android-version').className = 'download-meta ready'; }
+        else { document.querySelector('#android-version').textContent = 'APK non publié pour le moment.'; document.querySelector('#android-version').className = 'download-meta error'; }
+        if (windows) { windowsLink.href = windows.browser_download_url; windowsLink.removeAttribute('aria-disabled'); windowsLink.setAttribute('download', windows.name); document.querySelector('#windows-version').textContent = `${windows.release.tag_name} · ${windows.name}`; document.querySelector('#windows-version').className = 'download-meta ready'; }
+        else { document.querySelector('#windows-version').textContent = 'Installateur non publié pour le moment.'; document.querySelector('#windows-version').className = 'download-meta error'; }
+        status.textContent = android || windows ? 'Les fichiers disponibles sont téléchargés directement par votre navigateur.' : 'Les builds sont en cours de publication.'; status.classList.add(android || windows ? 'ready' : 'error');
+      } catch (_) { status.textContent = 'Impossible de vérifier les builds pour le moment. Aucun lien invalide ne sera ouvert.'; status.classList.add('error'); document.querySelector('#android-version').textContent = 'Vérification indisponible.'; document.querySelector('#windows-version').textContent = 'Vérification indisponible.'; }
     }
     loadReleases();
   </script>

@@ -58,8 +58,8 @@ async function hydrateReleaseLinks() {
     const exe = assets.find(asset => /\.exe$/i.test(asset.name) && /setup|installer|mini.?copilot/i.test(asset.name));
     const apk = assets.find(asset => /\.apk$/i.test(asset.name));
     const windows = document.querySelector('#windows-download'); const android = document.querySelector('#android-download');
-    if (windows) windows.href = exe?.browser_download_url || 'https://github.com/fenocicinho-prog/mini-copilot/releases';
-    if (android) android.href = apk?.browser_download_url || 'https://github.com/fenocicinho-prog/mini-copilot/releases';
+    if (windows && exe) { windows.href = exe.browser_download_url; windows.removeAttribute('aria-disabled'); }
+    if (android && apk) { android.href = apk.browser_download_url; android.removeAttribute('aria-disabled'); }
   } catch (_) { /* liens de secours conservés */ }
 }
 

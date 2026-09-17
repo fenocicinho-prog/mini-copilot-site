@@ -2,7 +2,7 @@ const params = new URLSearchParams(location.search);
 const config = {
   agent: params.get('agent') || '',
   token: params.get('token') || '',
-  githubRepo: 'fenocicinho-prog/mini-copilot',
+  githubRepo: 'fenocicinho-prog/mini-copilot-site',
 };
 const form = document.querySelector('#demo-form');
 const input = document.querySelector('#demo-input');

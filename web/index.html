@@ -64,6 +64,10 @@
   #auth .panel { width: min(440px, calc(100% - 32px)); background: var(--panel); border-radius: var(--radius-lg); padding: 1.4rem; }
   #auth h2 { margin: 0 0 .35rem; } #auth p { color: var(--muted); font-size: .85rem; }
   #auth input, #auth select { display:block; width:100%; margin:.55rem 0; padding:.75rem 1rem; border:0; border-radius:var(--radius-pill); background:var(--composer); color:var(--text); }
+  #auth .age-row { display:flex; align-items:center; gap:.6rem; color:var(--muted); font-size:.8rem; margin:.7rem 0; }
+  #auth input[type="checkbox"] { display:inline-block; width:18px; height:18px; margin:0; accent-color:#fff; }
+  #auth .privacy-link { color:var(--text); font-size:.78rem; }
+  #deleteAccountBtn { display:none; background:#542027; color:#ffdce0; }
   #auth .btns { display:flex; gap:.5rem; margin-top:.8rem; } #auth button { flex:1; padding:.7rem; border:0; border-radius:var(--radius-pill); cursor:pointer; font-weight:700; }
   #auth .primary { background:#fff; color:#111; } #auth .secondary { background:var(--panel-2); color:var(--text); }
   #authError { color:#ff9090; min-height:1.2em; }
@@ -276,7 +280,7 @@
     <pre id="terminal" aria-label="Sortie du terminal"></pre>
   </aside>
 </main>
-<section id="auth"><div class="panel"><h2 id="authTitle">Se connecter</h2><p>La session est vérifiée par le serveur central avant chaque message.</p><input id="firstName" placeholder="Prénom" style="display:none"><input id="lastName" placeholder="Nom" style="display:none"><input id="email" type="email" placeholder="Email"><input id="password" type="password" placeholder="Mot de passe (8 caractères minimum)"><div id="authError"></div><div class="btns"><button class="primary" id="authSubmit">Se connecter</button><button class="secondary" id="authMode">Créer un compte</button></div><div class="btns"><button class="secondary" id="googleBtn">Continuer avec Google</button><button class="secondary" id="authClose">Fermer</button></div></div></section>
+<section id="auth"><div class="panel"><h2 id="authTitle">Se connecter</h2><p>La session est vérifiée par le serveur central avant chaque message.</p><input id="firstName" placeholder="Prénom" style="display:none"><input id="lastName" placeholder="Nom" style="display:none"><input id="email" type="email" placeholder="Email"><input id="password" type="password" placeholder="Mot de passe (8 caractères minimum)"><label class="age-row"><input id="ageConfirmed" type="checkbox">Je confirme avoir au moins 16 ans.</label><p><a class="privacy-link" href="../privacy.html" target="_blank" rel="noopener">Politique de confidentialité</a></p><div id="authError"></div><div class="btns"><button class="primary" id="authSubmit">Se connecter</button><button class="secondary" id="authMode">Créer un compte</button></div><div class="btns"><button class="secondary" id="googleBtn">Continuer avec Google</button><button class="secondary" id="authClose">Fermer</button></div><div class="btns"><button id="deleteAccountBtn">Supprimer mon compte</button></div></div></section>
 <section id="plans"><div style="max-width:900px;margin:auto"><h2>Accès gratuit</h2><p style="color:var(--muted)">Toutes les fonctionnalités sont disponibles sans abonnement ni paiement.</p><div id="planGrid"></div><button class="secondary" id="plansClose">Fermer</button></div></section>
 <script src="app.js"></script>
 </body>

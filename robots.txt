@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /mini-copilot-site/web/
+
+Sitemap: https://fenocicinho-prog.github.io/mini-copilot-site/sitemap.xml
